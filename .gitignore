@@ -1,0 +1,49 @@
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock
+ 
+# Anchor
+.anchor/
+dist/
+build/
+ 
+# Node
+node_modules/
+yarn.lock
+package-lock.json
+ 
+# Test artifacts
+test-ledger/
+.mocharc*
+ 
+# IDL / generated types (commit these if you want consumers to use them)
+# target/idl/
+# target/types/
+ 
+# Solana keypairs - NEVER commit these
+**/*.json
+!programs/*/src/**/*.json
+ 
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+ 
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+ 
+# Env
+.env
+.env.local
+.env.*.local
+ 
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+ 
