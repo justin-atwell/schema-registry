@@ -177,4 +177,96 @@ describe("schema-registry", () => {
       }
     });
   });
+  describe("deprecate_schema", () => {
+  // schema_id 0 and 1 were registered in the previous describe block
+  // we'll deprecate schema 0 and point it to schema 1 as successor
+
+  const schemaId0 = new anchor.BN(0);
+  const [schemaRecordPda0] =
+    anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("schema"),
+        authority.publicKey.toBuffer(),
+        schemaId0.toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId
+    );
+
+  const schemaId1 = new anchor.BN(1);
+  const [schemaRecordPda1] =
+    anchor.web3.PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("schema"),
+        authority.publicKey.toBuffer(),
+        schemaId1.toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId
+    );
+
+  it("deprecates a schema with a successor", async () => {
+    await program.methods
+      .deprecateSchema(schemaId1) // successor_id = 1
+      .accounts({
+        authority: authority.publicKey,
+        schemaRecord: schemaRecordPda0,
+      })
+      .rpc();
+
+    const schema = await program.account.schemaRecord.fetch(schemaRecordPda0);
+    expect(schema.deprecated).to.equal(true);
+    expect(schema.successorId.toNumber()).to.equal(1);
+  });
+
+  it("deprecates a schema without a successor", async () => {
+    await program.methods
+      .deprecateSchema(null) // no successor
+      .accounts({
+        authority: authority.publicKey,
+        schemaRecord: schemaRecordPda1,
+      })
+      .rpc();
+
+    const schema = await program.account.schemaRecord.fetch(schemaRecordPda1);
+    expect(schema.deprecated).to.equal(true);
+    expect(schema.successorId).to.equal(null);
+  });
+
+  it("fails if wrong authority tries to deprecate", async () => {
+    // Generate a random keypair to act as the wrong authority
+    const wrongAuthority = anchor.web3.Keypair.generate();
+
+    // Airdrop some SOL so it can pay for the transaction
+    const sig = await provider.connection.requestAirdrop(
+      wrongAuthority.publicKey,
+      anchor.web3.LAMPORTS_PER_SOL
+    );
+    await provider.connection.confirmTransaction(sig);
+
+    // Register a fresh schema owned by the real authority to try to deprecate
+    const schemaId2 = new anchor.BN(2);
+    const [schemaRecordPda2] =
+      anchor.web3.PublicKey.findProgramAddressSync(
+        [
+          Buffer.from("schema"),
+          authority.publicKey.toBuffer(),
+          schemaId2.toArrayLike(Buffer, "le", 8),
+        ],
+        program.programId
+      );
+
+    try {
+      await program.methods
+        .deprecateSchema(null)
+        .accounts({
+          authority: wrongAuthority.publicKey,
+          schemaRecord: schemaRecordPda2,
+        })
+        .signers([wrongAuthority])
+        .rpc();
+      expect.fail("Should have thrown");
+    } catch (err) {
+      expect(err).to.exist;
+    }
+  });
+});
 });
