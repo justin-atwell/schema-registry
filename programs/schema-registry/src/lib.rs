@@ -7,6 +7,7 @@ pub mod state;
 use instructions::initialize::*;
 use instructions::register_schema::*;
 use instructions::deprecate_schema::*;
+use instructions::update_fee::*;
 
 declare_id!("64emq1duDiA3YCyyuZX8QZUDMPbk2iRqMU7H13BZP2nM");
 
@@ -33,5 +34,9 @@ pub mod schema_registry {
         successor_id: Option<u64>,
     ) -> Result<()> {
         instructions::deprecate_schema::handler(ctx, successor_id)
+    }
+
+    pub fn update_fee(ctx: Context<UpdateFee>, new_fee: u64) -> Result<()> {
+        instructions::update_fee::handler(ctx, new_fee)
     }
 }

@@ -269,4 +269,46 @@ describe("schema-registry", () => {
     }
   });
 });
+describe("update_fee", () => {
+  it("updates the fee when called by authority", async () => {
+    const newFee = new anchor.BN(5_000_000); // 0.005 SOL
+
+    await program.methods
+      .updateFee(newFee)
+      .accounts({
+        authority: authority.publicKey,
+        registryConfig: registryConfigPda,
+      })
+      .rpc();
+
+    const config = await program.account.registryConfig.fetch(
+      registryConfigPda
+    );
+    expect(config.feeInLamports.toNumber()).to.equal(5_000_000);
+  });
+
+  it("fails when called by wrong authority", async () => {
+    const wrongAuthority = anchor.web3.Keypair.generate();
+
+    const sig = await provider.connection.requestAirdrop(
+      wrongAuthority.publicKey,
+      anchor.web3.LAMPORTS_PER_SOL
+    );
+    await provider.connection.confirmTransaction(sig);
+
+    try {
+      await program.methods
+        .updateFee(new anchor.BN(999))
+        .accounts({
+          authority: wrongAuthority.publicKey,
+          registryConfig: registryConfigPda,
+        })
+        .signers([wrongAuthority])
+        .rpc();
+      expect.fail("Should have thrown");
+    } catch (err) {
+      expect(err).to.exist;
+    }
+  });
+});
 });
